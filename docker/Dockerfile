@@ -1,5 +1,6 @@
 # Use a smaller image for faster builds, we only need runtime
-FROM nvidia/cuda:12.3.0-devel-ubuntu22.04
+# FROM nvidia/cuda:12.3.0-devel-ubuntu22.04
+FROM nvidia/cuda:12.3.0-runtime-ubuntu22.04
 
 # Install python3
 RUN apt-get update && apt-get install -y python3 python3-pip git wget curl && apt-get clean
@@ -23,12 +24,12 @@ ENV HF_HOME=/root/.cache/huggingface
 # RUN python3 -c "from diffusers import AutoPipelineForText2Image; \
 #     AutoPipelineForText2Image.from_pretrained('stabilityai/sd-turbo')"
 
-# If you want SDXL for GPU runtime:
-RUN python3 -c "from diffusers import AutoPipelineForText2Image; \
-    AutoPipelineForText2Image.from_pretrained('stabilityai/sdxl-turbo')"
+# # If you want SDXL for GPU runtime:
+# RUN python3 -c "from diffusers import AutoPipelineForText2Image; \
+#     AutoPipelineForText2Image.from_pretrained('stabilityai/sdxl-turbo')"
 
-# Ensure cached models are used
-ENV HF_HUB_OFFLINE=1
+# # Ensure cached models are used
+# ENV HF_HUB_OFFLINE=1
 
 # Can I afford to remove the app.py from the final docker image?
 COPY src/ /app/src
