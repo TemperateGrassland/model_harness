@@ -12,7 +12,7 @@ RUN pip3 install --upgrade pip &&  pip3 install -r requirements.txt
 
 # Can I afford to remove the app.py from the final docker image?
 COPY src/ /app/src
-COPY sagemaker/serve /usr/local/bin/serve
+COPY sagemaker/serve.sh /usr/local/bin/serve
 RUN chmod +x /usr/local/bin/serve
 
 ENV PYTHONPATH=/app/src
