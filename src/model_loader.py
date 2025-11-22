@@ -1,6 +1,8 @@
+import logging
+import os
+
 import torch
 from diffusers import AutoPipelineForText2Image
-import logging
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,33 +22,41 @@ def get_device() -> str:
 
 
 def get_pipeline():
-    logger.info("Creating global pipeline...")
     global _pipe
-
     if _pipe is not None:
         return _pipe
 
     device = get_device()
-    logger.info("setting dtype...")
-    dtype = torch.float16 if device == "cuda" else torch.float32
 
-    logger.info(f"Loading SDXL pipeline on {device} ({dtype}) …")
-    pipe = AutoPipelineForText2Image.from_pretrained(
-        "stabilityai/sdxl-turbo",
-        dtype=dtype,
-    ).to(device)
-
+    # Use a smaller model on CPU so local Docker runs don't OOM,
+    # but keep SDXL-turbo for real GPU deployments.
     if device == "cuda":
-        logger.info("model loader using cuda...")
+        model_id = os.getenv("MODEL_ID", "stabilityai/sdxl-turbo")
+        torch_dtype = torch.float16
+    else:
+        # Lighter pipeline for local dev on CPU
+        model_id = os.getenv("MODEL_ID", "stabilityai/sd-turbo")
+        torch_dtype = torch.float32
+
+    logger.info(f"Loading pipeline {model_id} on {device} ({torch_dtype}) …")
+
+    pipe = AutoPipelineForText2Image.from_pretrained(
+        model_id,
+        torch_dtype=torch_dtype,
+        low_cpu_mem_usage=True,
+    )
+
+    pipe = pipe.to(device)
+
+    logger.info("Warming up model…")
+    if device == "cuda":
         from torch.cuda.amp import autocast
-        logger.info("Warming up model…")
         with torch.inference_mode(), autocast("cuda"):
             pipe("warmup", num_inference_steps=2, guidance_scale=0.0)
     else:
-        # Optional CPU warmup (slow)
-        logger.info("Warming up model (CPU)…")
         with torch.inference_mode():
             pipe("warmup", num_inference_steps=2, guidance_scale=0.0)
 
     _pipe = pipe
+    logger.info("Pipeline ready.")
     return _pipe

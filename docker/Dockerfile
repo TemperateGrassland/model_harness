@@ -1,14 +1,21 @@
 # Use a smaller image for faster builds, we only need runtime
 FROM nvidia/cuda:12.3.0-devel-ubuntu22.04
 
+# Install python3
 RUN apt-get update && apt-get install -y python3 python3-pip git wget curl && apt-get clean
+# install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
 
 WORKDIR /app
 
-# COPY docker/requirements.txt .
+COPY pyproject.toml /app/
+COPY uv.lock /app/
+RUN uv sync --frozen --no-dev
 
-# Combine RUN cmds into one line to reduce layers
-RUN pip3 install --upgrade pip &&  pip3 install -r requirements.txt
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
 
 # Can I afford to remove the app.py from the final docker image?
 COPY src/ /app/src
@@ -19,6 +26,6 @@ ENV PYTHONPATH=/app/src
 ENV MODEL_DIR=/opt/ml/model
 
 # Define an entrypoint to ensure python executable is always used
-ENTRYPOINT ["python"]
+ENTRYPOINT ["bash", "/usr/local/bin/serve"]
 # default command
-CMD ["serve"]
+# CMD ["/usr/local/bin/serve"]
