@@ -15,7 +15,7 @@ jobs:
 
     env:
       AWS_REGION: eu-west-1   # adjust
-      ECR_REPOSITORY: model-harness
+      ECR_REPOSITORY: model_harness
       IMAGE_TAG: latest       # or use github.sha or a semver
 
     steps:
