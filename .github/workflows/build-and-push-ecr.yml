@@ -1,0 +1,45 @@
+name: Build and push Docker image to ECR
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write    # needed for OIDC
+      contents: read     # to checkout the repo
+
+    env:
+      AWS_REGION: eu-west-1   # adjust
+      ECR_REPOSITORY: model-harness
+      IMAGE_TAG: latest       # or use github.sha or a semver
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials from GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::559972484328:role/github_action_model_harness
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          IMAGE_URI=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+          echo "Building image: $IMAGE_URI"
+
+          docker build -t "$IMAGE_URI" -f docker/Dockerfile .
+          docker push "$IMAGE_URI"
+
+          echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
