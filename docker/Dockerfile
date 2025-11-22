@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y python3 python3-pip git wget curl && ap
 
 WORKDIR /app
 
-COPY docker/requirements.txt .
+# COPY docker/requirements.txt .
 
 # Combine RUN cmds into one line to reduce layers
 RUN pip3 install --upgrade pip &&  pip3 install -r requirements.txt
