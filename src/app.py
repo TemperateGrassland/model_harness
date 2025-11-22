@@ -1,29 +1,20 @@
-import torch
-from diffusers import StableDiffusionPipeline
+# src/app.py
 from pathlib import Path
-import time
+from src.model_loader import get_pipeline
+
 
 def generate_image(prompt: str, output_path: str = "output.png"):
-    print("Loading model… this may take a while…")
-
-    pipe = StableDiffusionPipeline.from_pretrained(
-        "stabilityai/sdxl-turbo",
-        torch_dtype=torch.float16
-    )
-    pipe.to("cuda")
-
-    torch.cuda.synchronize()
+    pipe = get_pipeline()   # <- shared loader
 
     print("Generating image...")
-    result = pipe(prompt, num_inference_steps=8)
+    result = pipe(prompt, num_inference_steps=8, guidance_scale=0.0)
 
     image = result.images[0].convert("RGB")
-
-    time.sleep(0.5)
 
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     image.save(output_path)
     print(f"Saved to {output_path}")
+
 
 if __name__ == "__main__":
     import argparse
