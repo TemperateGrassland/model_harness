@@ -1,13 +1,9 @@
+# src/model_loader.py
 import logging
 import os
-
 import torch
 from diffusers import AutoPipelineForText2Image
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
-)
 logger = logging.getLogger(__name__)
 
 _pipe = None
@@ -27,36 +23,25 @@ def get_pipeline():
         return _pipe
 
     device = get_device()
+    torch_dtype = torch.float16 if device == "cuda" else torch.float32
 
-    # Use a smaller model on CPU so local Docker runs don't OOM,
-    # but keep SDXL-turbo for real GPU deployments.
-    if device == "cuda":
-        model_id = os.getenv("MODEL_ID", "stabilityai/sdxl-turbo")
-        torch_dtype = torch.float16
+    # Prefer local model dir if present (SageMaker puts model.tar.gz under /opt/ml/model)
+    model_dir = os.getenv("MODEL_DIR", "/opt/ml/model")
+
+    if os.path.exists(os.path.join(model_dir, "model_index.json")):
+        model_id = model_dir
+        logger.info(f"Loading pipeline from local dir: {model_id}")
     else:
-        # Lighter pipeline for local dev on CPU
-        model_id = os.getenv("MODEL_ID", "stabilityai/sd-turbo")
-        torch_dtype = torch.float32
-
-    logger.info(f"Loading pipeline {model_id} on {device} ({torch_dtype}) …")
+        # Fallback to HF hub (for local dev / non-SM usage)
+        model_id = "stabilityai/sdxl-turbo"
+        logger.info(f"Local model not found, loading from hub: {model_id}")
 
     pipe = AutoPipelineForText2Image.from_pretrained(
         model_id,
         torch_dtype=torch_dtype,
         low_cpu_mem_usage=True,
-    )
-
-    pipe = pipe.to(device)
-
-    logger.info("Warming up model…")
-    if device == "cuda":
-        from torch.cuda.amp import autocast
-        with torch.inference_mode(), autocast("cuda"):
-            pipe("warmup", num_inference_steps=2, guidance_scale=0.0)
-    else:
-        with torch.inference_mode():
-            pipe("warmup", num_inference_steps=2, guidance_scale=0.0)
+        local_files_only=os.path.isdir(model_dir),  # avoid hub if we know it's local
+    ).to(device)
 
     _pipe = pipe
-    logger.info("Pipeline ready.")
     return _pipe
