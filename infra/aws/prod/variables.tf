@@ -58,3 +58,22 @@ variable "async_s3_failure_path" {
   type        = string
   default     = null
 }
+
+# Auto Scaling Configuration (optional overrides)
+variable "enable_autoscaling" {
+  description = "Enable auto scaling for the SageMaker endpoint"
+  type        = bool
+  default     = true
+}
+
+variable "min_capacity" {
+  description = "Minimum number of instances (0 for scale-to-zero)"
+  type        = number
+  default     = 0
+}
+
+variable "max_capacity" {
+  description = "Maximum number of instances"
+  type        = number
+  default     = 1
+}

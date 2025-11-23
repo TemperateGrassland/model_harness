@@ -48,3 +48,75 @@ resource "aws_sagemaker_endpoint" "this" {
   name                 = "${var.name_prefix}-endpoint"
   endpoint_config_name = aws_sagemaker_endpoint_configuration.this.name
 }
+
+# Application Auto Scaling Target
+resource "aws_appautoscaling_target" "sagemaker_target" {
+  max_capacity       = var.max_capacity
+  min_capacity       = var.min_capacity
+  resource_id        = "endpoint/${aws_sagemaker_endpoint.this.name}/variant/AllTraffic"
+  scalable_dimension = "sagemaker:variant:DesiredInstanceCount"
+  service_namespace  = "sagemaker"
+
+  depends_on = [aws_sagemaker_endpoint.this]
+}
+
+# Scale-Out Policy (when invocations increase)
+resource "aws_appautoscaling_policy" "sagemaker_scale_out" {
+  name               = "${var.name_prefix}-sagemaker-scale-out"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.sagemaker_target.resource_id
+  scalable_dimension = aws_appautoscaling_target.sagemaker_target.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.sagemaker_target.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    target_value       = var.target_invocations_per_instance
+    scale_in_cooldown  = var.scale_in_cooldown
+    scale_out_cooldown = var.scale_out_cooldown
+
+    predefined_metric_specification {
+      predefined_metric_type = "SageMakerVariantInvocationsPerInstance"
+    }
+  }
+}
+
+# Scale-In Policy (when invocations are low - scale to zero)
+resource "aws_appautoscaling_policy" "sagemaker_scale_in" {
+  name               = "${var.name_prefix}-sagemaker-scale-in"
+  policy_type        = "StepScaling"
+  resource_id        = aws_appautoscaling_target.sagemaker_target.resource_id
+  scalable_dimension = aws_appautoscaling_target.sagemaker_target.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.sagemaker_target.service_namespace
+
+  step_scaling_policy_configuration {
+    adjustment_type         = "ExactCapacity"
+    cooldown               = var.scale_in_cooldown
+    metric_aggregation_type = "Average"
+
+    # Scale to exactly 0 instances when no invocations
+    step_adjustment {
+      scaling_adjustment          = 0  # Scale to zero instances
+      metric_interval_upper_bound = 0.0
+    }
+  }
+}
+
+# CloudWatch Alarm for scaling to zero (no invocations)
+resource "aws_cloudwatch_metric_alarm" "low_invocations" {
+  alarm_name          = "${var.name_prefix}-sagemaker-low-invocations"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = var.scale_in_evaluation_periods
+  metric_name         = "Invocations"
+  namespace           = "AWS/SageMaker"
+  period              = var.scale_in_period
+  statistic           = "Sum"
+  threshold           = var.low_invocation_threshold
+  alarm_description   = "Scale SageMaker endpoint to zero when no invocations"
+  alarm_actions       = [aws_appautoscaling_policy.sagemaker_scale_in.arn]
+
+  dimensions = {
+    EndpointName = aws_sagemaker_endpoint.this.name
+    VariantName  = "AllTraffic"
+  }
+
+  treat_missing_data = "breaching"  # Treat missing data as low usage
+}

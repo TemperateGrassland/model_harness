@@ -3,7 +3,7 @@ terraform {
     bucket         = "model-harness-tf-state-bucket"
     key            = "model-harness/prod/terraform.tfstate"
     region         = "eu-west-1"
-    dynamodb_table = "terraform-locks"
+    use_lockfile = true
     encrypt        = true
   }
 }

@@ -28,7 +28,7 @@ variable "instance_type" {
 variable "initial_instance_count" {
   description = "Initial number of instances"
   type        = number
-  default     = 1
+  default     = 0
 }
 
 variable "vpc_subnet_ids" {
@@ -56,4 +56,53 @@ variable "async_max_concurrent_invocations_per_instance" {
   description = "Maximum concurrent invocations per instance for async inference"
   type        = number
   default     = 4
+}
+
+# Auto Scaling Variables
+variable "min_capacity" {
+  description = "Minimum number of instances (set to 0 for scale-to-zero)"
+  type        = number
+  default     = 0
+}
+
+variable "max_capacity" {
+  description = "Maximum number of instances"
+  type        = number
+  default     = 1
+}
+
+variable "target_invocations_per_instance" {
+  description = "Target number of invocations per instance for auto scaling"
+  type        = number
+  default     = 5
+}
+
+variable "scale_in_cooldown" {
+  description = "Cooldown period in seconds for scaling in"
+  type        = number
+  default     = 600  # 10 minutes
+}
+
+variable "scale_out_cooldown" {
+  description = "Cooldown period in seconds for scaling out"
+  type        = number
+  default     = 300  # 5 minutes
+}
+
+variable "scale_in_evaluation_periods" {
+  description = "Number of evaluation periods for scaling in alarm"
+  type        = number
+  default     = 3
+}
+
+variable "scale_in_period" {
+  description = "Period in seconds for scaling in alarm"
+  type        = number
+  default     = 300  # 5 minutes
+}
+
+variable "low_invocation_threshold" {
+  description = "Threshold for low invocations to trigger scale to zero"
+  type        = number
+  default     = 1
 }
