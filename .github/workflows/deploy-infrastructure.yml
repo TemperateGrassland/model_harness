@@ -1,0 +1,156 @@
+name: Deploy SageMaker Infrastructure
+
+on:
+  workflow_run:
+    workflows: ["Build and push Docker image to ECR"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+      confirm_apply:
+        description: 'Type "APPLY" to confirm terraform apply'
+        required: false
+        type: string
+
+jobs:
+  terraform-plan:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'plan') || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply') }}
+    
+    permissions:
+      id-token: write    # needed for OIDC
+      contents: read     # to checkout the repo
+
+    env:
+      AWS_REGION: eu-west-1
+      TERRAFORM_VERSION: 1.9.0
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Configure AWS credentials from GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::559972484328:role/github_action_model_harness
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        working-directory: infra/aws/prod
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: infra/aws/prod
+        env:
+          # VPC Configuration from GitHub Secrets
+          TF_VAR_vpc_subnet_ids: ${{ secrets.TF_VAR_vpc_subnet_ids }}
+          TF_VAR_vpc_security_group_ids: ${{ secrets.TF_VAR_vpc_security_group_ids }}
+          # Optional overrides
+          TF_VAR_region: ${{ secrets.TF_VAR_region || env.AWS_REGION }}
+        run: |
+          terraform plan -out=tfplan
+          terraform show -no-color tfplan > plan-output.txt
+
+      - name: Upload Terraform Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: |
+            infra/aws/prod/tfplan
+            infra/aws/prod/plan-output.txt
+          retention-days: 30
+
+      - name: Comment Plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const planOutput = fs.readFileSync('infra/aws/prod/plan-output.txt', 'utf8');
+            const body = `## Terraform Plan 📋
+            
+            <details>
+            <summary>Show Plan Output</summary>
+            
+            \`\`\`
+            ${planOutput}
+            \`\`\`
+            </details>
+            
+            **⚠️ Manual approval required for apply step**
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+  terraform-apply:
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    # This job only runs when manually triggered with explicit confirmation
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply' && github.event.inputs.confirm_apply == 'APPLY' }}
+    
+    permissions:
+      id-token: write
+      contents: read
+
+    env:
+      AWS_REGION: eu-west-1
+      TERRAFORM_VERSION: 1.9.0
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Configure AWS credentials from GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::559972484328:role/github_action_model_harness
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan
+          path: infra/aws/prod/
+
+      - name: Terraform Init
+        working-directory: infra/aws/prod
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: infra/aws/prod
+        env:
+          TF_VAR_vpc_subnet_ids: ${{ secrets.TF_VAR_vpc_subnet_ids }}
+          TF_VAR_vpc_security_group_ids: ${{ secrets.TF_VAR_vpc_security_group_ids }}
+          TF_VAR_region: ${{ secrets.TF_VAR_region || env.AWS_REGION }}
+        run: terraform apply tfplan
+
+      - name: Output Endpoint Information
+        working-directory: infra/aws/prod
+        run: |
+          echo "## SageMaker Deployment Complete! 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Endpoint Name:** $(terraform output -raw sagemaker_endpoint_name)" >> $GITHUB_STEP_SUMMARY
+          echo "**Endpoint URL:** $(terraform output -raw sagemaker_endpoint_url)" >> $GITHUB_STEP_SUMMARY

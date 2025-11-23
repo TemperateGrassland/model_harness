@@ -10,6 +10,7 @@ __pycache__/
 *.png
 *.jpg
 *.jpeg
+*.md
 
 # Distribution / packaging
 .Python
@@ -210,3 +211,16 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.*
+.terraformrc
+terraform.rc
+
+# Sensitive environment files
+infra/**/env-setup.sh
+infra/**/*.tfvars.local
+infra/**/*secrets*
