@@ -68,6 +68,14 @@ resource "aws_sagemaker_endpoint" "this" {
     Scaling      = "auto-scale-to-zero"
     InstanceType = var.instance_type
   }
+
+  lifecycle {
+    create_before_destroy = true
+    ignore_changes = [
+      # Ignore changes to endpoint config name during updates
+      # This prevents unnecessary recreation when config changes
+    ]
+  }
 }
 
 # Application Auto Scaling Target
