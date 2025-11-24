@@ -91,3 +91,73 @@ module "sagemaker_endpoint" {
   min_capacity           = var.min_capacity
   max_capacity           = var.max_capacity
 }
+
+# VPC Endpoints for cost optimization (avoid NAT Gateway charges)
+data "aws_vpc" "main" {
+  filter {
+    name   = "vpc-id" 
+    values = [data.aws_subnet.first.vpc_id]
+  }
+}
+
+data "aws_subnet" "first" {
+  id = var.vpc_subnet_ids[0]
+}
+
+data "aws_route_table" "private" {
+  subnet_id = var.vpc_subnet_ids[0]
+}
+
+# S3 VPC Endpoint (Gateway endpoint - no cost)
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = data.aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.region}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = [data.aws_route_table.private.id]
+
+  tags = {
+    Name = "${var.name_prefix}-s3-endpoint"
+  }
+}
+
+# ECR API VPC Endpoint (Interface endpoint)
+resource "aws_vpc_endpoint" "ecr_api" {
+  vpc_id              = data.aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.region}.ecr.api"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = var.vpc_subnet_ids
+  security_group_ids  = var.vpc_security_group_ids
+  private_dns_enabled = true
+
+  tags = {
+    Name = "${var.name_prefix}-ecr-api-endpoint"
+  }
+}
+
+# ECR Docker VPC Endpoint (Interface endpoint)
+resource "aws_vpc_endpoint" "ecr_dkr" {
+  vpc_id              = data.aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.region}.ecr.dkr"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = var.vpc_subnet_ids
+  security_group_ids  = var.vpc_security_group_ids
+  private_dns_enabled = true
+
+  tags = {
+    Name = "${var.name_prefix}-ecr-dkr-endpoint"
+  }
+}
+
+# SageMaker Runtime VPC Endpoint (Interface endpoint)
+resource "aws_vpc_endpoint" "sagemaker_runtime" {
+  vpc_id              = data.aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.region}.sagemaker.runtime"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = var.vpc_subnet_ids
+  security_group_ids  = var.vpc_security_group_ids
+  private_dns_enabled = true
+
+  tags = {
+    Name = "${var.name_prefix}-sagemaker-runtime-endpoint"
+  }
+}
