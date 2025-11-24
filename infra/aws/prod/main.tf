@@ -81,7 +81,7 @@ module "sagemaker_endpoint" {
   image_uri              = var.image_uri
   model_data_url         = var.model_data_url
   instance_type          = var.instance_type
-  initial_instance_count = 0  # Start with 0 instances for scale-to-zero
+  initial_instance_count = 1  # Start with 1 instances and then scale-to-zero
   vpc_subnet_ids         = var.vpc_subnet_ids
   vpc_security_group_ids = var.vpc_security_group_ids
   async_s3_output_path   = var.async_s3_output_path

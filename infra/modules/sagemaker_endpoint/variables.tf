@@ -28,7 +28,7 @@ variable "instance_type" {
 variable "initial_instance_count" {
   description = "Initial number of instances"
   type        = number
-  default     = 0
+  default     = 1
 }
 
 variable "vpc_subnet_ids" {
