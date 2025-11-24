@@ -55,11 +55,11 @@ jobs:
       - name: Terraform Plan
         working-directory: infra/aws/prod
         env:
-          # VPC Configuration from GitHub Secrets
-          TF_VAR_vpc_subnet_ids: ${{ secrets.TF_VAR_vpc_subnet_ids }}
-          TF_VAR_vpc_security_group_ids: ${{ secrets.TF_VAR_vpc_security_group_ids }}
+          # VPC Configuration from GitHub Variables
+          TF_VAR_vpc_subnet_ids: ${{ vars.TF_VAR_vpc_subnet_ids }}
+          TF_VAR_vpc_security_group_ids: ${{ vars.TF_VAR_vpc_security_group_ids }}
           # Optional overrides
-          TF_VAR_region: ${{ secrets.TF_VAR_region || env.AWS_REGION }}
+          TF_VAR_region: ${{ vars.TF_VAR_region || env.AWS_REGION }}
         run: |
           terraform plan -out=tfplan
           terraform show -no-color tfplan > plan-output.txt
@@ -142,9 +142,9 @@ jobs:
       - name: Terraform Apply
         working-directory: infra/aws/prod
         env:
-          TF_VAR_vpc_subnet_ids: ${{ secrets.TF_VAR_vpc_subnet_ids }}
-          TF_VAR_vpc_security_group_ids: ${{ secrets.TF_VAR_vpc_security_group_ids }}
-          TF_VAR_region: ${{ secrets.TF_VAR_region || env.AWS_REGION }}
+          TF_VAR_vpc_subnet_ids: ${{ vars.TF_VAR_vpc_subnet_ids }}
+          TF_VAR_vpc_security_group_ids: ${{ vars.TF_VAR_vpc_security_group_ids }}
+          TF_VAR_region: ${{ vars.TF_VAR_region || env.AWS_REGION }}
         run: terraform apply tfplan
 
       - name: Output Endpoint Information
