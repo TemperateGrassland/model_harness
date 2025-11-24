@@ -59,6 +59,8 @@ jobs:
           # VPC Configuration from GitHub Variables
           TF_VAR_vpc_subnet_ids: ${{ vars.TF_VAR_vpc_subnet_ids }}
           TF_VAR_vpc_security_group_ids: ${{ vars.TF_VAR_vpc_security_group_ids }}
+          # Model Configuration from GitHub Variables
+          TF_VAR_model_data_url: ${{ vars.TF_VAR_model_data_url }}
           # Optional overrides
           TF_VAR_region: ${{ vars.TF_VAR_region || env.AWS_REGION }}
         run: |
@@ -145,6 +147,7 @@ jobs:
         env:
           TF_VAR_vpc_subnet_ids: ${{ vars.TF_VAR_vpc_subnet_ids }}
           TF_VAR_vpc_security_group_ids: ${{ vars.TF_VAR_vpc_security_group_ids }}
+          TF_VAR_model_data_url: ${{ vars.TF_VAR_model_data_url }}
           TF_VAR_region: ${{ vars.TF_VAR_region || env.AWS_REGION }}
         run: terraform apply tfplan
 

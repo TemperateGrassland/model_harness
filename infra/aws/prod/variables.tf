@@ -16,9 +16,8 @@ variable "image_uri" {
 }
 
 variable "model_data_url" {
-  description = "S3 URL for model artifacts (optional for custom containers)"
+  description = "S3 URL for model artifacts"
   type        = string
-  default     = null
 }
 
 variable "instance_type" {
@@ -56,7 +55,6 @@ variable "async_s3_output_path" {
 variable "async_s3_failure_path" {
   description = "S3 path for failed async inference outputs"
   type        = string
-  default     = null
 }
 
 # Auto Scaling Configuration (optional overrides)

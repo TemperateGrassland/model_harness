@@ -7,9 +7,10 @@ resource "aws_sagemaker_model" "this" {
     model_data_url = var.model_data_url
     mode           = "SingleModel"
 
-    # Optional, for env to your container (MODEL_DIR, etc.)
+    # Environment variables for the container
     environment = {
-      MODEL_DIR = "/opt/ml/model"
+      MODEL_DIR         = "/opt/ml/model"
+      MODEL_S3_LOCATION = var.model_data_url
     }
   }
 

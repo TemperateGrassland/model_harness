@@ -225,5 +225,5 @@ infra/**/env-setup.sh
 infra/**/*.tfvars.local
 infra/**/*secrets*
 infra/**/*env-setup.sh.example*
-infra/**/*env-setup.sh.example*
+infra/aws/prod/env-setup.sh.example
 

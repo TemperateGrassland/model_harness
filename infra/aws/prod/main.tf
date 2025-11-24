@@ -14,13 +14,6 @@ resource "aws_iam_role" "sagemaker_execution_role" {
       }
     ]
   })
-
-  tags = {
-    Name         = "${var.name_prefix}-sagemaker-execution-role"
-    ResourceType = "iam-role"
-    Function     = "sagemaker-execution"
-    Service      = "sagemaker"
-  }
 }
 
 # Attach the SageMaker execution policy
@@ -88,7 +81,7 @@ module "sagemaker_endpoint" {
   image_uri              = var.image_uri
   model_data_url         = var.model_data_url
   instance_type          = var.instance_type
-  initial_instance_count = 1  # Start with 1 instances and then scale-to-zero
+  initial_instance_count = 1  # Start with 1 instances and then scale-to-zero. At least 1 must be used. 
   vpc_subnet_ids         = var.vpc_subnet_ids
   vpc_security_group_ids = var.vpc_security_group_ids
   async_s3_output_path   = var.async_s3_output_path
@@ -97,90 +90,4 @@ module "sagemaker_endpoint" {
   # Auto Scaling Configuration
   min_capacity           = var.min_capacity
   max_capacity           = var.max_capacity
-}
-
-# VPC Endpoints for cost optimization (avoid NAT Gateway charges)
-data "aws_vpc" "main" {
-  filter {
-    name   = "vpc-id" 
-    values = [data.aws_subnet.first.vpc_id]
-  }
-}
-
-data "aws_subnet" "first" {
-  id = var.vpc_subnet_ids[0]
-}
-
-data "aws_route_table" "private" {
-  subnet_id = var.vpc_subnet_ids[0]
-}
-
-# S3 VPC Endpoint (Gateway endpoint - no cost)
-resource "aws_vpc_endpoint" "s3" {
-  vpc_id            = data.aws_vpc.main.id
-  service_name      = "com.amazonaws.${var.region}.s3"
-  vpc_endpoint_type = "Gateway"
-  route_table_ids   = [data.aws_route_table.private.id]
-
-  tags = {
-    Name         = "${var.name_prefix}-s3-endpoint"
-    ResourceType = "vpc-endpoint"
-    Function     = "cost-optimization"
-    Service      = "s3"
-    EndpointType = "gateway"
-  }
-}
-
-# ECR API VPC Endpoint (Interface endpoint)
-resource "aws_vpc_endpoint" "ecr_api" {
-  vpc_id              = data.aws_vpc.main.id
-  service_name        = "com.amazonaws.${var.region}.ecr.api"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = var.vpc_subnet_ids
-  security_group_ids  = var.vpc_security_group_ids
-  private_dns_enabled = true
-
-  tags = {
-    Name         = "${var.name_prefix}-ecr-api-endpoint"
-    ResourceType = "vpc-endpoint"
-    Function     = "cost-optimization"
-    Service      = "ecr-api"
-    EndpointType = "interface"
-  }
-}
-
-# ECR Docker VPC Endpoint (Interface endpoint)
-resource "aws_vpc_endpoint" "ecr_dkr" {
-  vpc_id              = data.aws_vpc.main.id
-  service_name        = "com.amazonaws.${var.region}.ecr.dkr"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = var.vpc_subnet_ids
-  security_group_ids  = var.vpc_security_group_ids
-  private_dns_enabled = true
-
-  tags = {
-    Name         = "${var.name_prefix}-ecr-dkr-endpoint"
-    ResourceType = "vpc-endpoint"
-    Function     = "cost-optimization"
-    Service      = "ecr-docker"
-    EndpointType = "interface"
-  }
-}
-
-# SageMaker Runtime VPC Endpoint (Interface endpoint)
-resource "aws_vpc_endpoint" "sagemaker_runtime" {
-  vpc_id              = data.aws_vpc.main.id
-  service_name        = "com.amazonaws.${var.region}.sagemaker.runtime"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = var.vpc_subnet_ids
-  security_group_ids  = var.vpc_security_group_ids
-  private_dns_enabled = true
-
-  tags = {
-    Name         = "${var.name_prefix}-sagemaker-runtime-endpoint"
-    ResourceType = "vpc-endpoint"
-    Function     = "cost-optimization"
-    Service      = "sagemaker-runtime"
-    EndpointType = "interface"
-  }
 }
