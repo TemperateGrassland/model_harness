@@ -1,11 +1,11 @@
 # AWS Configuration
-region = "eu-west-1"
+# region = "eu-west-1"
 
 # Resource naming
-name_prefix = "model-harness"
+# name_prefix = "model-harness"
 
 # Container Configuration
-image_uri = "559972484328.dkr.ecr.eu-west-1.amazonaws.com/model_harness:latest"
+# image_uri = "image-url"
 
 # Model Configuration - Set via environment variable for security:
 # export TF_VAR_model_data_url="s3://your-bucket/path/to/model.tar.gz"

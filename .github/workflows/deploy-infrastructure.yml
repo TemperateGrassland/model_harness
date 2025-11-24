@@ -61,6 +61,10 @@ jobs:
           TF_VAR_vpc_security_group_ids: ${{ vars.TF_VAR_vpc_security_group_ids }}
           # Model Configuration from GitHub Variables
           TF_VAR_model_data_url: ${{ vars.TF_VAR_model_data_url }}
+          # S3 Configuration from GitHub Variables
+          TF_VAR_s3_bucket_arn: ${{ vars.TF_VAR_s3_bucket_arn }}
+          TF_VAR_async_s3_output_path: ${{ vars.TF_VAR_async_s3_output_path }}
+          TF_VAR_async_s3_failure_path: ${{ vars.TF_VAR_async_s3_failure_path }}
           # Optional overrides
           TF_VAR_region: ${{ vars.TF_VAR_region || env.AWS_REGION }}
         run: |
@@ -148,6 +152,9 @@ jobs:
           TF_VAR_vpc_subnet_ids: ${{ vars.TF_VAR_vpc_subnet_ids }}
           TF_VAR_vpc_security_group_ids: ${{ vars.TF_VAR_vpc_security_group_ids }}
           TF_VAR_model_data_url: ${{ vars.TF_VAR_model_data_url }}
+          TF_VAR_s3_bucket_arn: ${{ vars.TF_VAR_s3_bucket_arn }}
+          TF_VAR_async_s3_output_path: ${{ vars.TF_VAR_async_s3_output_path }}
+          TF_VAR_async_s3_failure_path: ${{ vars.TF_VAR_async_s3_failure_path }}
           TF_VAR_region: ${{ vars.TF_VAR_region || env.AWS_REGION }}
         run: terraform apply tfplan
 
