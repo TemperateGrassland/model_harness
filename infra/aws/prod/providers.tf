@@ -11,5 +11,16 @@ terraform {
 
 provider "aws" {
   region = var.region
+
+  default_tags {
+    tags = {
+      Project     = "ai-infrastructure-engineer-technical-test"
+      Environment = "prod"
+      ManagedBy   = "terraform"
+      Owner       = "model-harness"
+      CostCenter  = "ml-inference"
+      Component   = "sagemaker-endpoint"
+    }
+  }
 }
 

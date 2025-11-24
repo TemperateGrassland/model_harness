@@ -14,6 +14,13 @@ resource "aws_iam_role" "sagemaker_execution_role" {
       }
     ]
   })
+
+  tags = {
+    Name         = "${var.name_prefix}-sagemaker-execution-role"
+    ResourceType = "iam-role"
+    Function     = "sagemaker-execution"
+    Service      = "sagemaker"
+  }
 }
 
 # Attach the SageMaker execution policy
@@ -116,7 +123,11 @@ resource "aws_vpc_endpoint" "s3" {
   route_table_ids   = [data.aws_route_table.private.id]
 
   tags = {
-    Name = "${var.name_prefix}-s3-endpoint"
+    Name         = "${var.name_prefix}-s3-endpoint"
+    ResourceType = "vpc-endpoint"
+    Function     = "cost-optimization"
+    Service      = "s3"
+    EndpointType = "gateway"
   }
 }
 
@@ -130,7 +141,11 @@ resource "aws_vpc_endpoint" "ecr_api" {
   private_dns_enabled = true
 
   tags = {
-    Name = "${var.name_prefix}-ecr-api-endpoint"
+    Name         = "${var.name_prefix}-ecr-api-endpoint"
+    ResourceType = "vpc-endpoint"
+    Function     = "cost-optimization"
+    Service      = "ecr-api"
+    EndpointType = "interface"
   }
 }
 
@@ -144,7 +159,11 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
   private_dns_enabled = true
 
   tags = {
-    Name = "${var.name_prefix}-ecr-dkr-endpoint"
+    Name         = "${var.name_prefix}-ecr-dkr-endpoint"
+    ResourceType = "vpc-endpoint"
+    Function     = "cost-optimization"
+    Service      = "ecr-docker"
+    EndpointType = "interface"
   }
 }
 
@@ -158,6 +177,10 @@ resource "aws_vpc_endpoint" "sagemaker_runtime" {
   private_dns_enabled = true
 
   tags = {
-    Name = "${var.name_prefix}-sagemaker-runtime-endpoint"
+    Name         = "${var.name_prefix}-sagemaker-runtime-endpoint"
+    ResourceType = "vpc-endpoint"
+    Function     = "cost-optimization"
+    Service      = "sagemaker-runtime"
+    EndpointType = "interface"
   }
 }

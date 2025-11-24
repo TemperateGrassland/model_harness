@@ -17,6 +17,12 @@ resource "aws_sagemaker_model" "this" {
     subnets         = var.vpc_subnet_ids
     security_group_ids = var.vpc_security_group_ids
   }
+
+  tags = {
+    Name         = "${var.name_prefix}-model"
+    ResourceType = "sagemaker-model"
+    Function     = "ml-inference"
+  }
 }
 
 resource "aws_sagemaker_endpoint_configuration" "this" {
@@ -28,7 +34,6 @@ resource "aws_sagemaker_endpoint_configuration" "this" {
     initial_instance_count = var.initial_instance_count
     instance_type          = var.instance_type
   }
-
 
   async_inference_config {
     output_config {
@@ -42,11 +47,26 @@ resource "aws_sagemaker_endpoint_configuration" "this" {
       max_concurrent_invocations_per_instance = var.async_max_concurrent_invocations_per_instance
     }
   }
+
+  tags = {
+    Name         = "${var.name_prefix}-endpoint-config"
+    ResourceType = "sagemaker-endpoint-config"
+    Function     = "ml-inference"
+    InstanceType = var.instance_type
+  }
 }
 
 resource "aws_sagemaker_endpoint" "this" {
   name                 = "${var.name_prefix}-endpoint"
   endpoint_config_name = aws_sagemaker_endpoint_configuration.this.name
+
+  tags = {
+    Name         = "${var.name_prefix}-endpoint"
+    ResourceType = "sagemaker-endpoint"
+    Function     = "ml-inference"
+    Scaling      = "auto-scale-to-zero"
+    InstanceType = var.instance_type
+  }
 }
 
 # Application Auto Scaling Target
@@ -58,6 +78,14 @@ resource "aws_appautoscaling_target" "sagemaker_target" {
   service_namespace  = "sagemaker"
 
   depends_on = [aws_sagemaker_endpoint.this]
+
+  tags = {
+    Name         = "${var.name_prefix}-autoscaling-target"
+    ResourceType = "autoscaling-target"
+    Function     = "cost-optimization"
+    MinCapacity  = var.min_capacity
+    MaxCapacity  = var.max_capacity
+  }
 }
 
 # Scale-Out Policy (when invocations increase)
@@ -119,4 +147,12 @@ resource "aws_cloudwatch_metric_alarm" "low_invocations" {
   }
 
   treat_missing_data = "breaching"  # Treat missing data as low usage
+
+  tags = {
+    Name         = "${var.name_prefix}-low-invocations-alarm"
+    ResourceType = "cloudwatch-alarm"
+    Function     = "cost-optimization"
+    Purpose      = "scale-to-zero"
+    Threshold    = var.low_invocation_threshold
+  }
 }
