@@ -11,7 +11,7 @@
 # export TF_VAR_model_data_url="s3://your-bucket/path/to/model.tar.gz"
 
 # Instance Configuration
-instance_type          = "ml.g4dn.xlarge"
+instance_type          = "ml.g4dn.2xlarge"
 initial_instance_count = 1
 
 # VPC Configuration - Set via environment variables for security:

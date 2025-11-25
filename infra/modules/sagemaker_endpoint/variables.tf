@@ -22,7 +22,7 @@ variable "model_data_url" {
 variable "instance_type" {
   description = "SageMaker instance type"
   type        = string
-  default     = "ml.g4dn.xlarge"
+  default     = "ml.g4dn.2xlarge"
 }
 
 variable "initial_instance_count" {
