@@ -101,11 +101,10 @@ async def invocations(request: Request):
         result = await _run_inference(prompt)
         
         # Add metadata for async inference tracking
+        from datetime import datetime
         result["inference_metadata"] = {
             "model": "sdxl-turbo",
-            "timestamp": logger.handlers[0].formatter.formatTime(logging.LogRecord(
-                name="", level=0, pathname="", lineno=0, msg="", args=(), exc_info=None
-            )),
+            "timestamp": datetime.utcnow().isoformat(),
             "content_type": content_type
         }
 
