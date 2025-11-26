@@ -37,7 +37,9 @@ Open a new terminal to query the endpoint:
 
 ## Using the endpoint
 
-Requires AWS credentials.
+Requires AWS credentials. 
+
+Run the bash script at /script/image_url.sh for an interactive way to prompt the model and view the output. Alternatively, key commands are available below:
 
 ### create query
 
@@ -46,6 +48,8 @@ Requires AWS credentials.
 `aws s3 cp input.json s3://model-harness-io/input.json`
 
 ### query model
+
+Make a note of the `OutputLocation` in the response, it will be needed next:
 
 ```
 aws sagemaker-runtime invoke-endpoint-async \
@@ -56,19 +60,12 @@ aws sagemaker-runtime invoke-endpoint-async \
 
 ### download image
 
-You can generate a pre-signed url to share:
-
-`aws s3 presign s3://model-harness-io/outputs/result.out --expires-in 3600`
-
-Or access directly with AWS creds:
-
-
-
+aws s3 cp "<OUTPUT_LOCATION>" result.json
 
 ### open image
 
-`cat <image-path>.json | jq -r '.image' | base64 -d > generated_image.png`
+`cat result.json | jq -r '.image' | base64 -d > generated_image.png`
 
 `òpen generated_image.png`
 
-![alt text](image.png)
+![alt text](scripts/generated_image.png)
