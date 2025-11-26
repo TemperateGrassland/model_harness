@@ -136,7 +136,7 @@ async def _run_inference(prompt: str):
     pipe = get_pipeline()
 
     if HAS_CUDA_AMP and torch.cuda.is_available():
-        ctx = autocast("cuda")
+        ctx = autocast()
         logger.info("Using CUDA with autocast...")
     else:
         ctx = nullcontext()
