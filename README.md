@@ -1,116 +1,113 @@
-# AI Infrastructure Engineering Technical Test
+# StableDiffusion deployment on Sagemaker
 
-## Objective
-You will take a simple local diffusion model and deploy it as a scalable inference service on **AWS SageMaker** using a custom Docker container.
+A Python FastAPI that hosts a [SD-turbo](https://huggingface.co/stabilityai/sd-turbo) /predict endpoint for local development and /invocation endpoint for hosting with AWS SagemakerAI.
 
-This exercise evaluates:
-- ML engineering instincts
-- GPU optimisation
-- Software engineering quality
-- Infrastructure & cloud skills
-- Ability to improve existing (poor) code
+The /infra dir uses Terraform to manage the deployment of an [aws_sagemaker_model](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sagemaker_model), [aws_sagemaker_endpoint_configuration](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sagemaker_endpoint_configuration) and [aws_sagemaker_endpoint](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sagemaker_endpoint).
 
-Signapse believes strongly in using the best tools for the job. In the spirit of that belief, we are happy for you to use AI where appropriate. 
+These terraform resources orchestrate the deployment of an asynchronous Sagemaker endpoint that can be used to serve requests. 
 
-## Tasks
+Data transfer is done within the VPC itself using VPC endpoints to ensure data transfer costs are kept low. There is no need for NAT gateway/interfaces to be used for this project.
 
-### 1. Run the Model Locally
-You are provided with deliberately unoptimised Python code in src/.
-Your first task is simply to run it and understand its behaviour.
+{TODO: Need to include information on how this endpoint is queried}
 
-Example:
+## Architecture
 
-``
-python src/app.py --prompt "a futuristic city floating in the clouds"
-``
+![Architecture Diagram](images/architecture.drawio.png)
 
-### 2. Optimise the Model Code
-The provided code is intentionally slow and inefficient.
+Application auto-scaling has been implemented to ensure the endpoint scales to zero when not in use to keep costs low. 
 
-You should:
+Terraform also provides an execution role for Sagemaker (least privilege) to allow Sagemaker to pull the model artefacts stored in S3.
 
-#### Fix and improve the inference pipeline
-- Move model loading out of the request path
-- Add model warmup
-- Use torch.inference_mode()
-- Use torch.autocast("cuda") for mixed precision
-- Remove unnecessary CUDA synchronisation
-- Reduce GPU memory footprint
-- Consider enabling attention/vae slicing or offloading
-- Improve output encoding performance
-- Improve code structure and readability
+MacOS was used for local development and model deployment.
 
-#### Optional (but rewarded):
-- Add batching support
-- Add caching for repeated prompts
-- Reduce inference steps / convert to JPEG for performance
-- Add meaningful logging
+# Key Information
 
-Please document the optimisations you apply.
+Cost per day for the solution: 
+Cloud: AWS.
+Authentication: IAM roles with least priviledge applied.
+Network: VPC (model in private subnets with VPC Interface and Gateway Endpoints used for routing traffic through the VPC Route layer/AWS backbone).
+Model layer: Sagemaker AI [ml.g4dn.2xlarge] & stable diffusion xl turbo for production use.
+Data layer: S3 is used for terraform state and model storage and output. DynamoDB is used for the terraform state lock.
 
-### 3. Containerize the Model
-- Inspect the provided docker/Dockerfile (also intentionally inefficient).
-- Improve it if necessary (layer reduction, smaller CUDA image, version pinning, etc.).
-- Build and run the model container locally.
-- Ensure the /predict endpoint works inside the container.
+# Project management
 
-### 4. Deploy on AWS SageMaker
-You must:
-- Create a CI pipeline that will build & push your Docker image to Amazon ECR
-- Create a Terraform script that will deploy the image to AWS SageMaker Inference and expose a /predict endpoint
-- Write tests using Terratest or similar to ensure the deployment works as expected
+I switched the requirements.txt to a pyproject.toml and installed Astral’s UV to ensure that dependency management is ready from the first step.
 
-You may use:
-- AWS CLI
-- Terraform
-- AWS SageMaker Python SDK
+# Optimisation of model code
 
-## Stretch Goals (Optional)
-These are not required but will positively influence evaluation:
-- Autoscaling policies
-- GPU utilisation monitoring
-- S3 output storage + presigned URLs
-- CI/CD pipeline for container build & deploy (GitHub Actions)
-- Multi-model or multi-container serving design
-- Batch or asynchronous inference support
+Initially, downloading the artefacts and running inference = ⏱  817.230s (13 mins)
 
-## Deliverables
-You must provide:
+Removing the torch.cuda.synchronize()
 
-#### 1. A GitHub repository containing:
-- Improved and refactored source code
-- Optimised Dockerfile
-- Deployment scripts (bash / Python / IaC)
-- Any utility scripts you use
-- A README explaining:
-  - How to build the image
-  - How to deploy the image
-  - The optimisations you implemented
-  - How to call the endpoint
+This slows down the application because it forces the CPU to block.
 
-#### 2. Clear documentation explaining how to deploy your infrastructure and a working test case.
+Diffusers handles GPU compute internally and automatically synchronises where necessary.
 
-## What We Evaluate
-#### ML Systems Engineering
-- GPU memory management
-- Torch optimisations (autocast, inference mode, etc.)
+Typical SDXL code has zero manual synchronisations.
 
-#### Infrastructure & DevOps
-- Docker optimisation
-- SageMaker architecture knowledge
-- Use of AWS services responsibly and cost-effectively
+## Model loader module
 
-#### Software Engineering
-- Code refactoring and clarity
-- Modularity and maintainability
-- Error handling and logging
+The model_loader configures the PyTorch pipeline depending on the environment. Development on MacOS requires running the model entirely on the cpu. Deployment on an ml.g4dn.2xlarge instance can make use of the GPU.
 
-#### Performance Improvements
-- Reduction in loading time
-- Reduction in inference latency
-- Reduced GPU memory usage
-- Observed speedup after your changes
+The model_loader module is working and reduces the processing time to ⏱  74.648s when running locally.
 
-### Good luck 🚀
+## Model warm-up
 
-We are evaluating your ability to improve, deploy, and operate AI systems — not just make something “work”, but make it production-ready.
+After adding a model warmup to the inference code, image generation time is now coming in at 14.399s when testing locally.
+
+# Containerise the model
+
+* Use a smaller base image to improve build times.
+* Modified layers to increase usage of cache.
+
+# Github Actions
+
+* Create AWS ECR for Image to be pushed to. Each image is tagged using the commit's shasum so that they can all be uniquely identified and mapped to a commit.
+* Create identity provider for OIDC with GitHub to allow GitHub to push images to ecr
+* Create role for Github to use
+* Attach restrictive policy
+* Add a GitHub actions yaml definition to build docker image and push to ecr when new pushes to main branch
+
+Two jobs are defined in the /.github. Environment variables are used to set sensitive values (although not secret values):
+
+* *build-and-push.yml*: build docker image and push to AWS ECR
+* *deploy-infrastructure.yml*: run terraform plan and apply jobs. The apply job required manual triggering to allow a human to review the plan before it is applied.
+
+# Deployment on Sagemaker
+
+TODO section
+
+# Useful commands
+
+## Project management
+
+Create a pyproject.toml: `uv init --bare`
+
+Import everything from requirements.txt: `uv add -r requirements.txt`
+
+Add a new dependency: `uv add <dependency>`
+
+Remove a dependency: `uv remove <dependency>`
+
+Sync environment: `uv sync`
+
+Run the app/test:  `uv run python src/app.py`
+
+## Build image and test /predict endpoint locally
+
+To run the /predict API: 
+
+`uv run uvicorn src.inference_handler:app --reload --port 8000`
+
+Then on a different terminal, to query the endpoint:
+
+`curl -s -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -d '{"prompt": "a cat astronaut on the moon"}' | jq -r '.image' | base64 --decode > output-cat.png`
+
+
+## Deploy image in AWS
+
+TODO
+
+## Using the endpoint
+
+TODO
