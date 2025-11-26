@@ -54,6 +54,16 @@ aws sagemaker-runtime invoke-endpoint-async \
       --content-type "application/json"
 ```
 
+### download image
+
+You can generate a pre-signed url to share:
+
+`aws s3 presign s3://model-harness-io/outputs/result.out --expires-in 3600`
+
+Or access directly with AWS creds:
+
+
+
 
 ### open image
 
