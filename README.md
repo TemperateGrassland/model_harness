@@ -1,4 +1,4 @@
-# StableDiffusion deployment on Sagemaker
+# sd-turbo deployment with Asynchronous SagemakerAI Endpoint
 
 A Python FastAPI that hosts a [SD-turbo](https://huggingface.co/stabilityai/sd-turbo) /predict endpoint for local development and /invocation endpoint for hosting with AWS SagemakerAI.
 
@@ -48,7 +48,7 @@ Requires AWS credentials.
 ### query model
 
 ```
-aws sagemaker-runtime invoke-endpoint-async \                 [10:43:11]
+aws sagemaker-runtime invoke-endpoint-async \
       --endpoint-name "model-harness-endpoint" \
       --input-location "s3://model-harness-io/input.json" \
       --content-type "application/json"
