@@ -1,6 +1,6 @@
 # sd-turbo deployment with Asynchronous SagemakerAI Endpoint
 
-A Python FastAPI that hosts a [SD-turbo](https://huggingface.co/stabilityai/sd-turbo) /predict endpoint for local development and /invocation endpoint for hosting with AWS SagemakerAI.
+A Python FastAPI that hosts a [SD-turbo](https://huggingface.co/stabilityai/sd-turbo) /predict endpoint for local development and /invocation endpoint for hosting with AWS SagemakerAI. The /invocation endpoint hosted in Sagemaker is asynchronous and currently requires manual triggering via the cli. The model reads from an S3 bucket, processes the prompt and stores the output in the same S3 bucket. 
 
 The /infra dir uses Terraform to manage the deployment of an [aws_sagemaker_model](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sagemaker_model), [aws_sagemaker_endpoint_configuration](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sagemaker_endpoint_configuration) and [aws_sagemaker_endpoint](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sagemaker_endpoint).
 
