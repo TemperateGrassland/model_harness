@@ -92,6 +92,59 @@ module "sagemaker_endpoint" {
   max_capacity           = var.max_capacity
 }
 
+# ============================================================================
+# PRODUCTION API INFRASTRUCTURE
+# ============================================================================
+
+# Application Load Balancer
+module "alb_api" {
+  count  = var.enable_api_gateway ? 1 : 0
+  source = "../../modules/alb_api"
+
+  name_prefix        = var.name_prefix
+  vpc_id             = data.aws_vpc.main.id
+  public_subnet_ids  = var.public_subnet_ids
+  certificate_arn    = var.certificate_arn
+}
+
+# ECS API Service  
+module "ecs_api" {
+  count  = var.enable_api_gateway ? 1 : 0
+  source = "../../modules/ecs_api"
+
+  name_prefix              = var.name_prefix
+  vpc_id                   = data.aws_vpc.main.id
+  private_subnet_ids       = var.vpc_subnet_ids
+  target_group_arn         = module.alb_api[0].target_group_arn
+  alb_security_group_id    = module.alb_api[0].alb_security_group_id
+  image_uri                = var.image_uri
+  sagemaker_endpoint_name  = module.sagemaker_endpoint.endpoint_name
+  s3_bucket_name           = local.s3_bucket_name
+  jwt_secret_key           = var.jwt_secret_key
+  redis_host               = var.enable_api_gateway && length(module.redis) > 0 ? module.redis[0].redis_endpoint : ""
+  cpu                      = var.api_cpu
+  memory                   = var.api_memory
+
+  depends_on = [module.sagemaker_endpoint]
+}
+
+# Redis for rate limiting (after ECS so we can reference its security group)
+module "redis" {
+  count  = var.enable_api_gateway ? 1 : 0
+  source = "../../modules/redis"
+
+  name_prefix            = var.name_prefix
+  vpc_id                 = data.aws_vpc.main.id
+  private_subnet_ids     = var.vpc_subnet_ids
+  ecs_security_group_id  = module.ecs_api[0].ecs_security_group_id
+  node_type              = var.redis_node_type
+}
+
+# Extract bucket name from ARN
+locals {
+  s3_bucket_name = split(":", var.s3_bucket_arn)[5]
+}
+
 # VPC Endpoints for cost optimization (avoid NAT Gateway charges)
 data "aws_vpc" "main" {
   filter {
@@ -124,19 +177,40 @@ resource "aws_vpc_endpoint" "s3" {
   }
 }
 
+# VPC Endpoint Security Group (for interface endpoints)
+resource "aws_security_group" "vpc_endpoint_sg" {
+  name_prefix = "${var.name_prefix}-vpc-endpoint-"
+  vpc_id      = data.aws_vpc.main.id
+  description = "Security group for VPC endpoints"
+
+  ingress {
+    description = "HTTPS from ECS tasks"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/8"]
+  }
+
+  tags = {
+    Name         = "${var.name_prefix}-vpc-endpoint-sg"
+    ResourceType = "security-group"
+    Function     = "vpc-endpoints"
+  }
+}
+
 # ECR API VPC Endpoint (Interface endpoint)
 resource "aws_vpc_endpoint" "ecr_api" {
   vpc_id              = data.aws_vpc.main.id
   service_name        = "com.amazonaws.${var.region}.ecr.api"
   vpc_endpoint_type   = "Interface"
   subnet_ids          = var.vpc_subnet_ids
-  security_group_ids  = var.vpc_security_group_ids
+  security_group_ids  = [aws_security_group.vpc_endpoint_sg.id]
   private_dns_enabled = true
 
   tags = {
     Name         = "${var.name_prefix}-ecr-api-endpoint"
     ResourceType = "vpc-endpoint"
-    Function     = "cost-optimization"
+    Function     = "ecs-connectivity"
     Service      = "ecr-api"
     EndpointType = "interface"
   }
@@ -148,14 +222,32 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
   service_name        = "com.amazonaws.${var.region}.ecr.dkr"
   vpc_endpoint_type   = "Interface"
   subnet_ids          = var.vpc_subnet_ids
-  security_group_ids  = var.vpc_security_group_ids
+  security_group_ids  = [aws_security_group.vpc_endpoint_sg.id]
   private_dns_enabled = true
 
   tags = {
     Name         = "${var.name_prefix}-ecr-dkr-endpoint"
     ResourceType = "vpc-endpoint"
-    Function     = "cost-optimization"
+    Function     = "ecs-connectivity"
     Service      = "ecr-docker"
+    EndpointType = "interface"
+  }
+}
+
+# CloudWatch Logs VPC Endpoint (for ECS logging)
+resource "aws_vpc_endpoint" "logs" {
+  vpc_id              = data.aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.region}.logs"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = var.vpc_subnet_ids
+  security_group_ids  = [aws_security_group.vpc_endpoint_sg.id]
+  private_dns_enabled = true
+
+  tags = {
+    Name         = "${var.name_prefix}-logs-endpoint"
+    ResourceType = "vpc-endpoint"
+    Function     = "ecs-logging"
+    Service      = "cloudwatch-logs"
     EndpointType = "interface"
   }
 }

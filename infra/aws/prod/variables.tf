@@ -23,7 +23,7 @@ variable "model_data_url" {
 variable "instance_type" {
   description = "SageMaker instance type"
   type        = string
-  default     = "ml.g4dn.2xlarge"
+  default     = "ml.g4dn.xlarge"
 }
 
 variable "initial_instance_count" {
@@ -74,4 +74,51 @@ variable "max_capacity" {
   description = "Maximum number of instances"
   type        = number
   default     = 1
+}
+
+# ============================================================================
+# API GATEWAY VARIABLES
+# ============================================================================
+
+variable "enable_api_gateway" {
+  description = "Enable API Gateway with ALB and ECS"
+  type        = bool
+  default     = false
+}
+
+variable "public_subnet_ids" {
+  description = "List of public subnet IDs for ALB (required if enable_api_gateway is true)"
+  type        = list(string)
+  default     = []
+}
+
+variable "certificate_arn" {
+  description = "ACM certificate ARN for HTTPS (optional)"
+  type        = string
+  default     = ""
+}
+
+variable "jwt_secret_key" {
+  description = "JWT secret key for authentication"
+  type        = string
+  sensitive   = true
+  default     = "change-me-in-production"
+}
+
+variable "redis_node_type" {
+  description = "ElastiCache Redis node type"
+  type        = string
+  default     = "cache.t3.micro"
+}
+
+variable "api_cpu" {
+  description = "CPU units for API ECS task (1024 = 1 vCPU)"
+  type        = number
+  default     = 1024
+}
+
+variable "api_memory" {
+  description = "Memory MB for API ECS task"
+  type        = number
+  default     = 2048
 }
