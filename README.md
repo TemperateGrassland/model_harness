@@ -70,7 +70,7 @@ aws s3 cp "<OUTPUT_LOCATION>" result.json
 
 `cat result.json | jq -r '.image' | base64 -d > generated_image.png`
 
-`òpen generated_image.png`
+`open generated_image.png`
 
 ![alt text](scripts/generated_image.png)
 
