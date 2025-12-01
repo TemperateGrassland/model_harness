@@ -227,3 +227,8 @@ infra/**/*secrets*
 infra/**/*env-setup.sh.example*
 infra/aws/prod/env-setup.sh.example
 
+infra/aws/prod/.terraform.lock.hcl
+infra/aws/prod/.terraform/
+infra/aws/prod/dev.tfvars
+input.json
+result.json
