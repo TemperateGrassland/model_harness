@@ -22,3 +22,10 @@ initial_instance_count = 1
 # export TF_VAR_s3_bucket_arn="arn:aws:s3:::your-bucket"
 # export TF_VAR_async_s3_output_path="s3://your-bucket/outputs/"
 # export TF_VAR_async_s3_failure_path="s3://your-bucket/failures/"
+
+# API Gateway Configuration
+enable_sagemaker_api_gateway = true
+api_stage_name              = "prod"
+api_quota_limit             = 1000
+api_rate_limit              = 10
+api_burst_limit             = 20

@@ -73,6 +73,7 @@ resource "aws_iam_role_policy" "s3_access" {
   })
 }
 
+# Async SageMaker Endpoint (existing)
 module "sagemaker_endpoint" {
   source = "../../modules/sagemaker_endpoint"
 
@@ -86,6 +87,24 @@ module "sagemaker_endpoint" {
   vpc_security_group_ids = var.vpc_security_group_ids
   async_s3_output_path   = var.async_s3_output_path
   async_s3_failure_path  = var.async_s3_failure_path
+  
+  # Auto Scaling Configuration
+  min_capacity           = var.min_capacity
+  max_capacity           = var.max_capacity
+}
+
+# Sync SageMaker Endpoint (new)
+module "sagemaker_sync_endpoint" {
+  source = "../../modules/sagemaker_sync_endpoint"
+
+  name_prefix            = var.name_prefix
+  execution_role_arn     = aws_iam_role.sagemaker_execution_role.arn
+  image_uri              = var.image_uri
+  model_data_url         = var.model_data_url
+  instance_type          = var.instance_type
+  initial_instance_count = 1
+  vpc_subnet_ids         = var.vpc_subnet_ids
+  vpc_security_group_ids = var.vpc_security_group_ids
   
   # Auto Scaling Configuration
   min_capacity           = var.min_capacity
@@ -268,4 +287,23 @@ resource "aws_vpc_endpoint" "sagemaker_runtime" {
     Service      = "sagemaker-runtime"
     EndpointType = "interface"
   }
+}
+
+# ============================================================================
+# API GATEWAY FOR DIRECT SAGEMAKER ACCESS
+# ============================================================================
+
+module "sagemaker_api_gateway" {
+  count  = var.enable_sagemaker_api_gateway ? 1 : 0
+  source = "../../modules/api_gateway"
+
+  name_prefix             = var.name_prefix
+  region                  = var.region
+  sagemaker_endpoint_name = module.sagemaker_sync_endpoint.endpoint_name
+  stage_name              = var.api_stage_name
+  api_quota_limit         = var.api_quota_limit
+  api_rate_limit          = var.api_rate_limit
+  api_burst_limit         = var.api_burst_limit
+
+  depends_on = [module.sagemaker_sync_endpoint]
 }

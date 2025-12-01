@@ -21,7 +21,11 @@ Two jobs are defined in the /.github:
 
 # Deployment on Sagemaker
 
-sd-turbo is deployed as an asynchronous model endpoint. Model querying happens via an aws cli call to the endpoint. Input is read from S3 and outputs and failures are saved to `s3://model-harness-io/outputs/` and `s3://model-harness-io/failures/` respectively.
+sd-turbo is deployed as a synchronous and asynchronous model endpoint. Model querying happens via an aws cli call to the endpoint. 
+
+For the async endpoint, input is read from S3 and outputs and failures are saved to `s3://model-harness-io/outputs/` and `s3://model-harness-io/failures/` respectively.
+
+The sync endpoint can be used to query the model and return the response directly for further processing. 
 
 # Useful commands
 
@@ -35,7 +39,7 @@ Open a new terminal to query the endpoint:
 
 `curl -s -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -d '{"prompt": "a cat astronaut on the moon"}' | jq -r '.image' | base64 --decode > output-cat.png`
 
-## Using the endpoint
+## Using the async endpoint
 
 Requires AWS credentials. 
 
@@ -69,3 +73,19 @@ aws s3 cp "<OUTPUT_LOCATION>" result.json
 `òpen generated_image.png`
 
 ![alt text](scripts/generated_image.png)
+
+## Using the sync endpoint
+
+Use the command below and update the prompt field to query the endpoint, decode the result and open the generated image:
+
+```
+aws sagemaker-runtime invoke-endpoint \                                                                                                                            [9:11:39]
+  --region eu-west-1 \
+  --endpoint-name model-harness-sync-endpoint \
+  --body '{"prompt": "Hello from CLI"}' \
+  --content-type application/json \
+  --cli-binary-format raw-in-base64-out \
+  result.json && \
+jq -r '.image' result.json | base64 --decode > output.png && \
+open output.png
+```

@@ -19,8 +19,18 @@ output "sagemaker_endpoint_name" {
 }
 
 output "sagemaker_endpoint_url" {
-  description = "URL for invoking the SageMaker endpoint"
+  description = "URL for invoking the SageMaker async endpoint"
   value       = "https://runtime.sagemaker.${var.region}.amazonaws.com/endpoints/${module.sagemaker_endpoint.endpoint_name}/invocations"
+}
+
+output "sagemaker_sync_endpoint_name" {
+  description = "Name of the SageMaker sync endpoint"
+  value       = module.sagemaker_sync_endpoint.endpoint_name
+}
+
+output "sagemaker_sync_endpoint_url" {
+  description = "URL for invoking the SageMaker sync endpoint"
+  value       = "https://runtime.sagemaker.${var.region}.amazonaws.com/endpoints/${module.sagemaker_sync_endpoint.endpoint_name}/invocations"
 }
 
 # ============================================================================
@@ -40,5 +50,25 @@ output "api_load_balancer_dns" {
 output "redis_endpoint" {
   description = "Redis endpoint for rate limiting"
   value       = var.enable_api_gateway && length(module.redis) > 0 ? module.redis[0].redis_endpoint : null
+  sensitive   = true
+}
+
+# ============================================================================
+# SAGEMAKER API GATEWAY OUTPUTS
+# ============================================================================
+
+output "sagemaker_api_gateway_url" {
+  description = "API Gateway URL for direct SageMaker access"
+  value       = var.enable_sagemaker_api_gateway ? module.sagemaker_api_gateway[0].api_gateway_url : "API Gateway not enabled"
+}
+
+output "sagemaker_api_generate_url" {
+  description = "Full URL for the generate endpoint via API Gateway"
+  value       = var.enable_sagemaker_api_gateway ? module.sagemaker_api_gateway[0].generate_endpoint_url : "API Gateway not enabled"
+}
+
+output "sagemaker_api_key" {
+  description = "API Gateway API key for authentication"
+  value       = var.enable_sagemaker_api_gateway ? module.sagemaker_api_gateway[0].api_key_value : null
   sensitive   = true
 }
