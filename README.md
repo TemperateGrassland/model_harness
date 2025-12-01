@@ -79,7 +79,7 @@ aws s3 cp "<OUTPUT_LOCATION>" result.json
 Use the command below and update the prompt field to query the endpoint, decode the result and open the generated image:
 
 ```
-aws sagemaker-runtime invoke-endpoint \                                                                                                                            [9:11:39]
+aws sagemaker-runtime invoke-endpoint \                                                                                                             
   --region eu-west-1 \
   --endpoint-name model-harness-sync-endpoint \
   --body '{"prompt": "Hello from CLI"}' \
