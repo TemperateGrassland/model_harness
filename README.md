@@ -89,3 +89,8 @@ aws sagemaker-runtime invoke-endpoint \                                         
 jq -r '.image' result.json | base64 --decode > output.png && \
 open output.png
 ```
+
+## Facts
+* local Docker image build (no-caching): 4.5 mins
+* Local Docker image build and push to ecr: 6.5 mins
+* sdxl-turbo model artefacts tarball: 9GB
